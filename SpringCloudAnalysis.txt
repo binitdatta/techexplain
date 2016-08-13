@@ -1,0 +1,1406 @@
+Spring Cloud Analysis
+
+1. Read More http://ryanjbaxter.com/2015/09/14/building-cloud-native-apps-with-spring-part-1/
+
+2. Create the Spring Boot ocr-races project in STS
+
+3. Click on New --> Spring Starter Project
+
+4. Provide a group name
+
+5. Provide the artifact name as ocr-races
+
+6. Name : OCR Races
+
+7. Choose Maven
+
+8. Choose JAr
+
+9. Choose Java 8
+
+10. The resultng project has the following pom.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.rollingstone</groupId>
+	<artifactId>ocr-races</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>ocr-races</name>
+	<description>Demo project for Spring Boot</description>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.3.6.RELEASE</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>Angel.SR6</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-eureka</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-feign</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+
+</project>
+
+
+11. It has a spring boot starter parent to bring spring framewrk dependencies easily like all other spring boot projects.
+
+<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.3.6.RELEASE</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+
+12. We wanted to also bring spring cloud dependencies easily and that is why we did this
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>Angel.SR6</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+13. In maven there are two ways to bring parent dependencies. One is to specify a parent and the other is to specify a dependency management section and choose import
+
+14. This is a rest application and we need web
+
+<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+15. We will use spring cloud eureka to look for the service we will be using 
+
+<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-eureka</artifactId>
+</dependency>
+
+16. We will use Spring cloud Feign to declaratively call rest apis. Something like Angular resource module
+
+<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-feign</artifactId>
+</dependency>
+
+17. This is our primary application for the Spring ocr-racesproject
+
+
+package com.rollingstone;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.feign.EnableFeignClients;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@SpringBootApplication
+@RestController
+@EnableDiscoveryClient
+@EnableFeignClients
+public class OcrRacesApplication implements CommandLineRunner {
+	
+	@Autowired
+	private ParticipantsClient participantsClient;
+	
+	private static List<Race> races = new ArrayList<Race>();
+
+    public static void main(String[] args) {
+        SpringApplication.run(OcrRacesApplication.class, args);
+    }
+
+	@Override
+	public void run(String... arg0) throws Exception {
+		races.add(new Race("Spartan Beast", "123", "MA", "Boston"));
+		races.add(new Race("Tough Mudder RI", "456", "RI", "Providence"));
+	}
+	
+	@RequestMapping("/")
+	public List<Race> getRaces() {
+		return races;
+	}
+	
+	@RequestMapping("/participants")
+	public List<RaceWithParticipants> getRacesWithParticipants() {
+		List<RaceWithParticipants> returnRaces = new ArrayList<RaceWithParticipants>();
+		for(Race r : races) {
+			returnRaces.add(new RaceWithParticipants(r, participantsClient.getParticipants(r.getId())));
+		}
+		return returnRaces;
+	}
+}
+
+
+18. We have important annotations
+
+@SpringBootApplication
+@RestController
+@EnableDiscoveryClient	   // for eureka
+@EnableFeignClients // for feign
+
+19. On startup this will run
+
+@Override
+	public void run(String... arg0) throws Exception {
+		races.add(new Race("Spartan Beast", "123", "MA", "Boston"));
+		races.add(new Race("Tough Mudder RI", "456", "RI", "Providence"));
+	}
+
+20. Our rest apis
+
+@RequestMapping("/")
+	public List<Race> getRaces() {
+		return races;
+	}
+	
+	@RequestMapping("/participants")
+	public List<RaceWithParticipants> getRacesWithParticipants() {
+		List<RaceWithParticipants> returnRaces = new ArrayList<RaceWithParticipants>();
+		for(Race r : races) {
+			returnRaces.add(new RaceWithParticipants(r, participantsClient.getParticipants(r.getId())));
+		}
+		return returnRaces;
+	}
+
+21. The Participant pojo which is shared
+
+package com.rollingstone;
+
+import java.util.List;
+
+public class Participant {
+	private String firstName;
+	private String lastName;
+	private String homeState;
+	private String shirtSize;
+	private List<String> races;
+	
+	public Participant(){
+		
+	}
+	
+	public Participant(String firstName, String lastName, String homeState,
+			String shirtSize, List<String> races) {
+		super();
+		this.firstName = firstName;
+		this.lastName = lastName;
+		this.homeState = homeState;
+		this.shirtSize = shirtSize;
+		this.races = races;
+	}
+	public String getFirstName() {
+		return firstName;
+	}
+	public void setFirstName(String firstName) {
+		this.firstName = firstName;
+	}
+	public String getLastName() {
+		return lastName;
+	}
+	public void setLastName(String lastName) {
+		this.lastName = lastName;
+	}
+	public String getHomeState() {
+		return homeState;
+	}
+	public void setHomeState(String homeState) {
+		this.homeState = homeState;
+	}
+	public String getShirtSize() {
+		return shirtSize;
+	}
+	public void setShirtSize(String shirtSize) {
+		this.shirtSize = shirtSize;
+	}
+	public List<String> getRaces() {
+		return races;
+	}
+	public void setRaces(List<String> races) {
+		this.races = races;
+	}
+	
+}
+
+22. Feign client for enabling the races application to call the participant rest api
+
+package com.rollingstone;
+
+import java.util.List;
+
+import org.springframework.cloud.netflix.feign.FeignClient;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+@FeignClient("participants")
+interface ParticipantsClient {
+	
+	@RequestMapping(method = RequestMethod.GET, value="/races/{raceId}")
+	List<Participant> getParticipants(@PathVariable("raceId") String raceId);
+	
+}
+
+23. Race pojo
+
+package com.rollingstone;
+
+public class Race {
+	private String name;
+	private String id;
+	private String state;
+	private String city;
+	
+	public Race(){
+		
+	}
+	
+	public Race(String name, String id, String state, String city) {
+		super();
+		this.name = name;
+		this.id = id;
+		this.state = state;
+		this.city = city;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public String getId() {
+		return id;
+	}
+	public void setId(String id) {
+		this.id = id;
+	}
+	public String getState() {
+		return state;
+	}
+	public void setState(String state) {
+		this.state = state;
+	}
+	public String getCity() {
+		return city;
+	}
+	public void setCity(String city) {
+		this.city = city;
+	}
+}
+
+
+24. RaceWithPArticipants
+
+package com.rollingstone;
+
+import java.util.List;
+
+public class RaceWithParticipants extends Race {
+	private List<Participant> participants;
+
+	public RaceWithParticipants(Race r, List<Participant> participants) {
+		super(r.getName(), r.getId(), r.getState(), r.getCity());
+		this.participants = participants;
+	}
+
+	public List<Participant> getParticipants() {
+		return participants;
+	}
+
+	public void setParticipants(List<Participant> participants) {
+		this.participants = participants;
+	}
+}
+
+25. races application.yml
+
+server:
+  port: 8282
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/  
+
+26. races bootstrap.yml
+
+spring:
+  application:
+    name: races
+
+27. Create the Spring Boot ocr-races project in STS
+
+28. Click on New --> Spring Starter Project
+
+29. Provide a group name
+
+30. Provide the artifact name as ocr-participants
+
+31. Name : OCR PArticipants
+
+32. Choose Maven
+
+33. Choose JAr
+
+34. Choose Java 8
+
+35. The resultng project has the following pom.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.rollingstone</groupId>
+	<artifactId>ocr-participants</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>ocr-participants</name>
+	<description>Demo project for Spring Boot</description>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.3.6.RELEASE</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				 <artifactId>spring-cloud-dependencies</artifactId>
+				<version>Angel.SR6</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-eureka</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+
+</project>
+
+
+36. While the races application used feign, this one does not
+
+<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-eureka</artifactId>
+		</dependency>
+</dependencies>
+
+37. Primary application file
+
+package com.rollingstone;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@SpringBootApplication
+@EnableDiscoveryClient
+public class OcrParticipantsApplication implements CommandLineRunner {
+	
+	private static List<Participant> participants = new ArrayList<Participant>();
+
+    public static void main(String[] args) {
+        SpringApplication.run(OcrParticipantsApplication.class, args);
+    }
+
+	@Override
+	public void run(String... arg0) throws Exception {
+		participants.add(new Participant("Ryan", "Baxter", "MA", "S", Arrays.asList("123", "456")));
+		participants.add(new Participant("Stephanie", "Baxter", "MA", "S", Arrays.asList("456")));		
+	}
+	
+	@RequestMapping("/")
+	public List<Participant> getParticipants() {
+		return participants;
+	}
+	
+	@RequestMapping("/races/{id}")
+	public List<Participant> getParticipants(@PathVariable String id) {
+		return participants.stream().filter(p -> p.getRaces().contains(id)).collect(Collectors.toList());
+	}
+}
+
+
+
+38. Pojo
+
+package com.rollingstone;
+
+import java.util.List;
+
+public class Participant {
+	private String firstName;
+	private String lastName;
+	private String homeState;
+	private String shirtSize;
+	private List<String> races;
+	
+	public Participant(){
+		
+	}
+	
+	public Participant(String firstName, String lastName, String homeState,
+			String shirtSize, List<String> races) {
+		super();
+		this.firstName = firstName;
+		this.lastName = lastName;
+		this.homeState = homeState;
+		this.shirtSize = shirtSize;
+		this.races = races;
+	}
+	public String getFirstName() {
+		return firstName;
+	}
+	public void setFirstName(String firstName) {
+		this.firstName = firstName;
+	}
+	public String getLastName() {
+		return lastName;
+	}
+	public void setLastName(String lastName) {
+		this.lastName = lastName;
+	}
+	public String getHomeState() {
+		return homeState;
+	}
+	public void setHomeState(String homeState) {
+		this.homeState = homeState;
+	}
+	public String getShirtSize() {
+		return shirtSize;
+	}
+	public void setShirtSize(String shirtSize) {
+		this.shirtSize = shirtSize;
+	}
+	public List<String> getRaces() {
+		return races;
+	}
+	public void setRaces(List<String> races) {
+		this.races = races;
+	}
+	
+}
+
+
+39. application.yml
+
+server:
+  port: 8181
+  
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+
+40.  bootstrap.yml
+
+spring:
+  application:
+    name: participants
+
+41.  Creating The Web Service The final service we are going to create is a service which serves the client-side browser code.  Our web app will be built using Angular.js.  Again, we will create a new project from start.spring.io.  Fill out the form following the screen shot below.
+
+42. Create the Spring Boot ocr-races project in STS
+
+43. Click on New --> Spring Starter Project
+
+44. Provide a group name
+
+45. Provide the artifact name as ocr-web
+
+46. Name : OCR Web
+
+47. Choose Maven
+
+48. Choose JAr
+
+49. Choose Java 8
+
+50. The resultng project has the following pom.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.rollingstone</groupId>
+	<artifactId>ocr-web</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>ocr-web</name>
+	<description>Demo project for Spring Boot</description>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.3.6.RELEASE</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				 <artifactId>spring-cloud-dependencies</artifactId>
+				<version>Angel.SR6</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-eureka</artifactId>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-zuul</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+
+</project>
+
+
+51. This one is special
+
+<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-zuul</artifactId>
+</dependency>
+
+52. Primary Application
+
+package com.rollingstone;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.zuul.EnableZuulProxy;
+
+@SpringBootApplication
+@EnableZuulProxy
+@EnableDiscoveryClient
+public class OcrWebApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(OcrWebApplication.class, args);
+	}
+}
+
+
+53. application.yml
+
+server:
+  port: 8080
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/  
+
+zuul:
+  routes:
+    races: /races/**
+    participants: /paticipants/**      
+
+54. bootstrap.yml
+
+spring:
+  application:
+    name: web
+
+55. In src/main/resources/static create the directories scripts/controllers and views.  In scripts/controllers create a new file called main.js and add the following code.
+
+angular.module('ocrApp')
+  .controller('MainCtrl', function ($scope, $http) {
+	  $http({
+          method: 'GET',
+          url: '/races'
+      }).then(function(response) {
+    	  $scope.races = response.data;
+      }, function(response) {
+    	  console.error('Error requesting races');
+      });
+  });
+
+56. Now  participants.js   in scripts/controllers
+
+angular.module('ocrApp')
+  .controller('ParticipantsCtrl', function ($scope, $http, $routeParams) {
+	  $http({
+          method: 'GET',
+          url: '/participants/races/' + $routeParams.raceId
+      }).then(function (response) {
+    	  $scope.participants = response.data;
+      }, function(response) {
+    	  console.error('Error requesting participants.')
+      });
+  });
+
+57. In the scripts directory create a new file called app.js and add the following code.
+
+angular
+  .module('ocrApp', [
+    'ngAnimate',
+    'ngCookies',
+    'ngResource',
+    'ngRoute',
+    'ngSanitize',
+    'ngTouch'
+  ])
+  .config(function ($routeProvider) {
+    $routeProvider
+      .when('/', {
+        templateUrl: 'views/main.html',
+        controller: 'MainCtrl'
+      })
+      .when('/participants/:raceId', {
+    	  templateUrl: 'views/participants.html',
+    	  controller: 'ParticipantsCtrl'
+      })
+      .otherwise({
+        redirectTo: '/'
+      });
+  });
+
+58.  In the views directory create a file called main.html and add the following code.
+
+<h3>Races</h3>
+<ul>
+	<li ng-repeat="race in races"><a ng-href="/#/participants/{{race.id}}">{{race.name}}</a></li>
+</ul>
+
+59. In the views directory create a file called participants.html and add the following code.
+
+<h3>Participants</h3>
+<ul>
+	<li ng-repeat="participant in participants">{{participant.firstName}} {{participant.lastName}}</li>
+</ul>
+
+60. In the static directory create a new file called index.html and add the following code.
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>OCR Races</title>
+
+    <!-- Bootstrap core CSS -->
+    <!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+
+    <!-- Custom styles for this template -->
+    <link href="http://getbootstrap.com/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <script src="http://getbootstrap.com/assets/js/ie-emulation-modes-warning.js"></script>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body data-pinterest-extension-installed="cr1.38.4" class=" hasGoogleVoiceExt" ng-app="ocrApp">
+
+    <div class="container">
+      <div class="header clearfix">
+        <nav>
+        </nav>
+        <h3 class="text-muted">OCR Races</h3>
+      </div>
+
+      <div ng-view=""></div>
+
+      <footer class="footer">
+        <p>© Company 2014</p>
+      </footer>
+
+    </div> <!-- /container -->
+
+
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="http://getbootstrap.com/assets/js/ie10-viewport-bug-workaround.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.5/angular.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.5/angular-animate.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.5/angular-cookies.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.5/angular-resource.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.5/angular-route.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.5/angular-sanitize.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.5/angular-touch.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/controllers/main.js"></script>
+    <script src="scripts/controllers/participants.js"></script>
+  
+
+</body></html>
+
+
+61. If you start this application and go to http://localhost:8080 you will see a simple page that just says hello world.
+
+62. Calling Our Races Service
+Now it is time to try to leverage some of the services we created in our front-end.  One of the first things we want to do is list all the races.  In the web app service open main.js and add the following code.
+
+angular.module('ocrApp')
+  .controller('MainCtrl', function ($scope, $http) {
+	  $http({
+          method: 'GET',
+          url: 'http://localhost:8282/races'
+      }).then(function(response) {
+    	  $scope.races = response.data;
+      }, function(response) {
+    	  console.error('Error requesting races');
+      });
+  });
+
+62. Here all we are doing is calling our races service to get the list of races and assigning it to a variable in our scope.  Start your races service app and the web app service and go to http://localhost:8080.  If you open your browsers console you will see the following error.
+
+Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at http://localhost:8282/races. (Reason: CORS header ‘Access-Control-Allow-Origin’ missing).
+
+63. If you are a web developer you are probably very familiar with this error.  All modern browsers prevent AJAX requests to other domains unless the server on that domain has specifically allowed requests to come from your domain, this is called the same-origin policy.  In this case we are making a request from localhost:8080 to localhost:8282 and the server at localhost:8282 has not said it allows requests coming from localhost:8080.  We could enable CORS (cross-origin resource sharing) in our races service so we can make requests to it from localhost:8080, but this becomes quite messy.  What happens when we deploy to production or test?  Those are additional domains we have to enable as well.  Since we can theoretically be talking to many, many microservices from the client side code we will have to do this for each service.  In addition, it is not uncommon in a microservices application to have services evolve and change over time, so while the races service is located at a specific URL today, that might not be the case in the future.  In short, hardcoding the URL to the service in our client side code and enabling CORS is just not going to cut it.
+
+Luckily Spring Cloud has a very clean and robust solution available to us.  To solve the problem of hard coding URLs in our client side code, or anywhere in our application, we will want to use service discovery.  Service discovery allows services to query a central location for a complete list of services that are available and the URL(s) those services are available at.  To solve the cross domain problem it would be nice if we had a simple reverse proxy on the same domain as our web app that leveraged the service discovery service to route requests to the right service.  We can use two projects that are part of Spring Cloud Netflix to do just that.  The Spring Cloud Netflix Eureka project will allow us to easily setup a service discovery service for our application while Spring Cloud Netflix Zuul sets up a reverse proxy that integrates with Eureka to call services.  In the next blog post we will take a look at how to integrate these two Spring Cloud projects into our application to solve our cross domain problem.
+
+
+
+64. In part 1 of this tutorial, I talked about some of the features of Spring Cloud and we started to build a microservice app that will display a list of obstacle course races.  At the end of part 1 we had three services/apps one which served race data, another which served race participant data, and the last which served our web app.  We ended part 1 when we ran into a cross domain issue when trying to make a request to our races service from our web service.
+
+As I mentioned, there are a number of ways to address the cross domain problem such as using CORS, but that solution does not scale well in a microservices based architecture.  Spring Cloud Netflix has two projects which can help solve this problem in a clean way which supports microservice architectures.  The first project, Eureka, will allow us to setup up service discovery for all the services in our microservices app.  Eureka has both server and client components.  The Eureka server is what all the clients register with and what stores the list of available services and where they are located (their URLs).  The Eureka client component is what we will integrate into each one of our microservices.
+
+The second project, Zuul, integrates with Eureka and allows us to setup a reverse proxy to call our services from our web app.
+
+65. Setting Up An Eureka Server
+
+66. Create the Spring Boot ocr-races project in STS
+
+67. Click on New --> Spring Starter Project
+
+68. Provide a group name
+
+69. Provide the artifact name as ocr-eureka
+
+70. Name : OCR Eureka
+
+71. Choose Maven
+
+78. Choose JAr
+
+79. Choose Java 8
+
+80. The resultng project has the following pom.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.rollingstone</groupId>
+	<artifactId>ocr-eureka</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>ocr-eureka</name>
+	<description>Demo project for Spring Boot</description>
+
+	<parent>
+		<groupId>org.springframework.cloud</groupId>
+		<artifactId>spring-cloud-starter-parent</artifactId>
+		<version>Brixton.SR1</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-eureka-server</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>Brixton.SR3</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+
+</project>
+
+
+81. VIP
+
+<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-eureka-server</artifactId>
+</dependency>
+
+82. application.yml
+
+server:
+  port: 8761
+  
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    registerWithEureka: false
+    fetchRegistry: false
+    serviceUrl:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+84. That is It!
+
+package com.rollingstone;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
+
+@SpringBootApplication
+@EnableEurekaServer
+public class OcrEurekaApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(OcrEurekaApplication.class, args);
+    }
+}
+
+85. This is our first time seeing a Spring Cloud dependency.  It works much like the other “starter” dependcies for Spring Boot.  The versions are managed by the Spring Cloud starter parent, which you will find in the dependency management section of the POM as well.
+
+86. To make this Spring Boot application act as a Eureka server all we need to do is add a single annotation to our application class and add a couple of properties to our application properties/YAML file.  Open OcrEurekaApplication.java in com.ryanjbaxter.spring.cloud.ocr.eureka.  At the top of the class file, either above or below @SpringBootApplication add @EnableEurekaServer.  Your class file should look like this.
+
+package com.ryanjbaxter.spring.cloud.ocr.eureka;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
+
+@SpringBootApplication
+@EnableEurekaServer
+public class OcrEurekaApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(OcrEurekaApplication.class, args);
+    }
+}
+
+And thats it, no code to write at all!
+
+Now go to src/main/resources and rename application.properties to application.yml and open the file application.yml.  Add the following properties to your YAML file
+
+server:
+  port: 8761
+  
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    registerWithEureka: false
+    fetchRegistry: false
+    serviceUrl:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+Everything in the eureka section of the YAML file is technically optional but eliminates some unecessary noise in the log files for now. Eureka out of the box is setup for high availability, so it expects that there be a second Eureka server is can replicate information with.  Since we are just running locally for now, we don’t need to worry about this, so these properties are just disabling that replication.  If you didn’t add these properties everything would still work fine, but you would see some errors in the logs.
+
+82. To start our Eureka server just run the Spring Boot app.  Once the app starts go to http://localhost:8761 and you should see a nice Eureka dashboard that will list all the services that are registered with Eureka.  Currently there are none so lets fix that.
+
+83. Enabling Eureka Clients
+Lets get our services configured to be Eureka clients.  First we need to name our services.  By default Spring Cloud Netflix will use the application name as the service name when registering services with Eureka.  To give our application’s names we can set a specific Spring Boot property.  In the src/main/resources folder of the races, participants, and web services create a file called bootstrap.yml.  Within the bootstrap.yml files add the following properties.
+
+spring:
+  application:
+    name: web
+
+84. The above code snippet is an example bootstrap.yml file from the web service (we are giving the app the name web).  In the bootstrap.yml files for the races and participants services change the name property to races and participants respectively.
+
+Now that our services have names lets add the Eureka client dependencies to them.  In the POM files for the races, participants, and web services add the following dependency management section
+
+<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-starter-parent</artifactId>
+				<version>Angel.SR3</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+</dependencyManagement>
+
+In addition you will want to add the following dependency to all three POMs
+
+<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-eureka</artifactId>
+</dependency>
+
+85. That takes care of our dependencies, now we can make each service a client by adding a single annotation to the application class file and adding some properties to the application’s properties file.  Open the application class file for each service and add @EnableDiscoveryClient to the class file.  For example, here is what the application class file for the web service
+
+package com.ryanjbaxter.spring.cloud.ocr.web;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient; 
+
+@SpringBootApplication 
+@EnableDiscoveryClient
+public class OcrWebApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(OcrWebApplication.class, args);
+    }
+}
+
+Now open the application.yml file for each service and add the following properties
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+
+86. These properties just tell the Eureka client where the Eureka server is located so it knows where to register itself.
+
+Start all the apps, the Eureka server, the races service, the participants service, and the web service.  It takes a few minutes for all the services to register themselves with Eureka.  If you watch the logs you should see an indication that registrations are taking place.  For example here are the logs from the races service when it registers itself with Eureka.
+
+87. If you see this in the logs of your services than you know things are working.  Once you start seeing these logs you can go to http://localhost:8671 and check the Eureka dashboard.  You should see something similar to the screenshot below with all the services registered.
+
+88. Setting Up A Reverse Proxy With Zuul
+
+89. Zuul will use the Eureka server in order to know how and where to route incoming requests.  We will integrate Zuul into our web service so our client side code can make requests back to the server on the same domain and avoid any cross domain issues.
+
+
+
+90. First we need to add the Zuul starter dependency to the POM of our web service.  Open the POM file and add the following dependency.
+
+<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-zuul</artifactId>
+</dependency>
+
+91. Again turning on Zuul in our application is as simple as adding another annotation to our application class file and adding some properties to our application’s properties file.  Open OcrWebApplication.java in com.ryanjbaxter.spring.cloud.ocr.web and add @EnableZuulProxy to the class file.
+
+92. 
+
+package com.ryanjbaxter.spring.cloud.ocr.web;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.zuul.EnableZuulProxy;
+
+@SpringBootApplication
+@EnableZuulProxy
+@EnableDiscoveryClient
+public class OcrWebApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(OcrWebApplication.class, args);
+    }
+}
+
+93. Now open application.yml for the web service and add the following properties
+
+zuul:
+  routes:
+    races: /races/**
+    participants: /paticipants/**
+
+94. By default Zuul will forward requests to path xyz to service xzy.  For example if you were to make a request to http://localhost:8080/races it would forward that request to the races service and call http://localhost:8282/.  However if you were to make a request to http://localhost:8080/races/123 it would not know what to do with it because it doesn’t know about the additional path information.  In the properties above we are just telling Zuul to forward all requests to /races/** to the races service and all requests to /participants/** to the participants service.
+
+After making the above changes to the web service restart the application.  Once it has reregistered with Eureka trying using the reverse proxy to proxy requests to the services.  For example, you should be able to open a browser and go to http://localhost:8080/races and get back the array of race information.  It should look exactly the same as if you went to the service directly by going to http://localhost:8282.  Similarly you should be able to go to http://localhost:8080/participants and get back the array of participants.  If those work than everything is setup correctly and you are good to go.  We can now use the reverse proxy and Eureka to finish implementing our web app.
+
+95. http://ryanjbaxter.com/2015/09/29/building-cloud-native-apps-with-spring-part-3/
+
+96. In Parts 1 and 2 of this tutorial we have built an application which displays upcoming obstacle course races and the participants that will be running them.  We have addressed some common cloud native app challenges list cross domain requests and service discovery by using projects from Spring Cloud and Netflix, namely Eureka and Zuul.  In part 3 we will finish implementing the web UI of our application.
+
+First lets make sure that we can fix the cross domain issue we were having when we started.
+
+98. Implementing The Races View
+Open main.js in the src/main/resources/static/controllers folder of your web service.  Change the url property of the $http call to /races.
+
+angular.module('ocrApp')
+  .controller('MainCtrl', function ($scope, $http) {
+	  $http({
+          method: 'GET',
+          url: '/races'
+      }).then(function(response) {
+    	  $scope.races = response.data;
+      }, function(response) {
+    	  console.error('Error requesting races');
+      });
+  });
+
+99. Make sure all the services are running and registered with Eureka and go to http://localhost:8080.  If you open the console of your browser you should no longer see any cross domain errors and your request to http://localhost:8080/races should complete successfully.
+
+Now lets leverage the data we are getting back from the request in the view for the main controller.  Open main.html in the src/main/resouces/static/views folder of the web service and change to code to be
+
+100. <h3>Races</h3>
+<ul>
+	<li ng-repeat="race in races"><a ng-href="/#/participants/{{race.id}}">{{race.name}}</a></li>
+</ul>
+
+After saving this file, go to http://localhost:8080 and you should see a list of races
+
+101.Clicking the links won’t work yet because we have not added the views or controllers to render the page, lets do that now.
+
+102. Adding A Participants View
+Create a new file called participants.js in src/main/resources/static/scripts/controllers and add the following code
+
+angular.module('ocrApp')
+  .controller('ParticipantsCtrl', function ($scope, $http, $routeParams) {
+	  $http({
+          method: 'GET',
+          url: '/participants/races/' + $routeParams.raceId
+      }).then(function (response) {
+    	  $scope.participants = response.data;
+      }, function(response) {
+    	  console.error('Error requesting participants.')
+      });
+  });
+
+103. This code just makes a request to our participants service (through Zuul) to get the list of participants for the race we clicked on.  Now we need a view to render the participants names.  Create a file called participants.html in src/main/resources/static/views and add the following code
+
+<h3>Participants</h3>
+<ul>
+	<li ng-repeat="participant in participants">{{participant.firstName}} {{participant.lastName}}</li>
+</ul>
+
+104. Finally we need to tell Angular about the new participants view and controller.  Open app.js in src/main/resources/static/scripts and modify it so it looks like the following code
+
+angular
+  .module('ocrApp', [
+    'ngAnimate',
+    'ngCookies',
+    'ngResource',
+    'ngRoute',
+    'ngSanitize',
+    'ngTouch'
+  ])
+  .config(function ($routeProvider) {
+    $routeProvider
+      .when('/', {
+        templateUrl: 'views/main.html',
+        controller: 'MainCtrl'
+      })
+      .when('/participants/:raceId', {
+    	  templateUrl: 'views/participants.html',
+    	  controller: 'ParticipantsCtrl'
+      })
+      .otherwise({
+        redirectTo: '/'
+      });
+  });
+
+105. Last but not least we need to include participants.js in our index.html page so the new JavaScript gets loaded.  Open i_ndex.html_ in src/main/resources/static and at the bottom, right after all the other script tags, add the following script tag to the file
+
+<script src="scripts/controllers/participants.js"></script>
+
+106. Thats it!  Refresh the page and try clicking on the links, they should all work now and you should be able to see every participant in each race.
+
+Congratulations you have built your first microservice app with Spring Boot and Spring Cloud!  Granted it is very simple and only works on your local machine, but it didn’t take much effort to do because Spring Boot and Spring Cloud make it easy to do what otherwise would be very complex tasks.
+
+107. http://ryanjbaxter.com/2015/10/01/building-cloud-native-apps-with-spring-part-4/
+
+108. After completing parts 1, 2, and 3 of this tutorial, we have a basic microservices application setup and running.  It is simple, but incorporates many of the mandates of being a cloud native application, so we are off to a good start.
+
+There are a couple of additional features in Spring Cloud Netflix that are particularly useful and worth demonstrating.  In this blog post I thought we would take a look at Feign.  Rather than describe it myself, the Spring Cloud documentation does a good job
+
+109. Feign is a declarative web service client. It makes writing web service clients easier. To use Feign create an interface and annotate it. It has pluggable annotation support including Feign annotations and JAX-RS annotations. Feign also supports pluggable encoders and decoders. Spring Cloud adds support for Spring MVC annotations and for using the same HttpMessageConverters used by default in Spring Web. Spring Cloud integrates Ribbon and Eureka to provide a load balanced http client when using Feign.
+
+110. In summary, if you are looking to build a REST API client, Feign is your friend. Making REST API calls from one service to another is a very common pattern in microservice applications so this functionality will prove particularly useful.  Also notice that Spring Cloud adds support for Ribbon and Eureka to Feign.  We are already familiar with what Eureka does from the previous parts of this tutorial, but what is Ribbon?
+
+111. Ribbon is another project from Netflix OSS and is what amounts to a client side load balancer.  This is important for obvious reasons when we start to look at services distributed over different data centers and geographies.  For example, Ribbon will use Eureka to figure out which instance of a service it should make a request to.  We will talk about Ribbon more in a future blog post, for now just know that is will load balance our requests from our Feign clients.
+
+112. Getting Started With Feign
+Now that we know what Feign is and why we want to use it, lets leverage it in our sample application.  Right now in order to get the participants for races we have to make a request to /races to get all the races and then make a request to /participants/races/{id} in order to get the participants for a given race.  In some situations this might be OK, but maybe not for all situations.  Consider the case where our app is being used on a mobile device.  Since the network on a mobile device is typically a lot slower than a desktop we might want to limit the number of network requests we need to make in order to get all the data we need.  In other words a mobile client might want to make a single request to get all the race and participant data instead of multiple requests.  Lets introduce a new API for mobile clients to use that does just that.
+
+Our new API will need to use both the races service and the participants service.  Since it is really returning data about races it makes sense for it to live in the races service.  We need a way to call the participants service from the races service, this is where Feign comes in.  First lets open the POM file for our races service and add the Feign dependency to our project.  In the dependencies section of your POM add the following dependency
+
+113. 
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-feign</artifactId>
+</dependency>
+
+114. Now lets open OcrRacesApplication.java in com.ryanjbaxter.spring.cloud.ocr.races.  First add @EnableFeignClients to the OcrRacesApplication class.  Then create a new interface that will acts as our REST client for talking to the participants service.  Create a new class called ParticipantsClient with the following code
+
+@FeignClient("participants")
+interface ParticipantsClient {
+	
+	@RequestMapping(method = RequestMethod.GET, value="/races/{raceId}")
+	List<Participant> getParticipants(@PathVariable("raceId") String raceId);
+	
+}
+
+The first thing you notice is that this interface uses an annotation called @FeignClient.  This annotation is telling Feign that we will be talking to a service called “participants”.  Feign will use Eureka to figure out the correct URL for the participants service.  The rest of the interface should look pretty familiar to you if you are familiar with Spring MVC.  The @RequestMapping annotation on the getParticipants method is telling Feign to make a GET request to the participants service at the path /races/raceId.
+
+At this point you will have compile errors in your interface because there is no class called Participant in the races service.  If you are a seasoned Java developer, your first instinct will probably be to do some refactoring.  You might go to the participants service extract out the Participant class into its own project.  Then you would change the participants and races service so they depend on this new project.  This has been engrained in our minds due to the DRY (do not repeat yourself) principal, which says we should not be copying and pasting code all over the place due to the fact that it will become unmaintainable.  This is certainly a valid concern, however we have to balance the DRY principal along with other principals of microservices.  The problem with this approach to refactoring our application is that we now have a common class used by 2 (or more) services.  What happens when one service needs to make a change to that class?  If the change is drastic enough, you can break the other service.  This means that the services can’t evolve independently of each other, which is one of the benefits we are trying to achieve by using microservices.
+
+At the end of the day you have to make a decision that is right for you, your team, and your project.  Do you want to share code between your microservices or do you want the benefit of being able to evolve your services independently of each other?  In this case we will NOT follow the DRY principal and create a new Participant class in our races service.  Why?  Think about how you would be working if you were building a real production grade microservices application.  You would be a developer on a team that is responsible for a single service.  In theory you will know nothing about the implementations of other services you depend on, the only thing you can rely on is their public API.  They may not even be implemented in the same language that you are using.  Based on that logic, it makes sense for you to create a Participant class in your service which corresponds to what their public API will return.  In my opinion, when it comes to microservices, sharing code between services does not generally make sense.
+
+115. In OcrRacesApplication.java create a new Participant class
+
+116. Finally we will need a new Race class which contains the information about the participants in the race.  Here, again we have a couple of options.  We can add a list of participants to our existing Race class but doing this would result in this weird participants property in the JSON that is always an empty array when we make requests to /races.  It seems odd to me as a consumer to have a property that seemingly never gets used until we call this new API we are creating.  The second option is create a subclass of Race which contains participants.  Add a new class called RacesWithParticipants
+
+116. Using The Feign Client
+Now we are ready to create our new API which will return race data including participant information.  In the OcrRacesApplication class where we have our existing getRaces API create a new API called getRacesWithParticipants.  But before we do that we will need an instance of ParticipantsClient which we will use in the new API to call the participants service.  Add a new variable to the class
+
+117. @Autowired
+private ParticipantsClient participantsClient;
+
+118. Now add the new API
+
+@RequestMapping("/participants")
+	public List<RaceWithParticipants> getRacesWithParticipants() {
+		List<RaceWithParticipants> returnRaces = new ArrayList<RaceWithParticipants>();
+		for(Race r : races) {
+			returnRaces.add(new RaceWithParticipants(r, participantsClient.getParticipants(r.getId())));
+		}
+		return returnRaces;
+	}
+That is all the code we need to write, now lets test out our new API.  Start the eureka, races, participants, and web services and go to http://localhost:8080/races/participants.  (Make sure you let all the services register themselves with Eureka before trying the API.)  This should return some JSON that looks like this
+
+[
+   {
+      "name":"Spartan Beast",
+      "id":"123",
+      "state":"MA",
+      "city":"Boston",
+      "participants":[
+         {
+            "firstName":"Ryan",
+            "lastName":"Baxter",
+            "homeState":"MA",
+            "shirtSize":"S",
+            "races":[
+               "123",
+               "456"
+            ]
+         }
+      ]
+   },
+   {
+      "name":"Tough Mudder RI",
+      "id":"456",
+      "state":"RI",
+      "city":"Providence",
+      "participants":[
+         {
+            "firstName":"Ryan",
+            "lastName":"Baxter",
+            "homeState":"MA",
+            "shirtSize":"S",
+            "races":[
+               "123",
+               "456"
+            ]
+         },
+         {
+            "firstName":"Stephanie",
+            "lastName":"Baxter",
+            "homeState":"MA",
+            "shirtSize":"S",
+            "races":[
+               "456"
+            ]
+         }
+      ]
+   }
+]
+At the same time you can also continue to use the /races API at http://localhost:8080/races to just get the race data.
+
+As you can see Feign makes it very easy to build REST clients for other services in your microservices app.  Just by using a few annotations and minimal Java code you can easily construct a REST client for any service you want.
